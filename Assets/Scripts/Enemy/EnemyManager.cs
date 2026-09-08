@@ -24,7 +24,20 @@ namespace Enemy
         [SerializeField] private Animator _animator;
         [SerializeField] private Collider _modelCollider;
         [SerializeField] private Inventory.LootGroupData _lootGroup;
+        [SerializeField, Min(0f)] private float _attackDamage = 10f;
         private NavMeshAgent _agent;
+        public event System.Action<EnemyManager> Died;
+        private bool _persistentTarget;
+
+        public void Engage(Transform target)
+        {
+            _persistentTarget = true;
+            _target = target;
+            _currentState = State.MoveTo;
+            _agent.isStopped = false;
+            _agent.SetDestination(target.position);
+            _animator.SetBool(_animRunningParamHash, true);
+        }
 
         #region Variables: General
         private float _hp;
@@ -74,6 +87,7 @@ namespace Enemy
 
         private void OnTriggerEnter(Collider other)
         {
+            if (_currentState == State.Die || _persistentTarget) return;
             if (other.CompareTag("Player"))
             {
                 _target = other.transform;
@@ -88,6 +102,7 @@ namespace Enemy
 
         private void OnTriggerExit(Collider other)
         {
+            if (_currentState == State.Die || _persistentTarget) return;
             if (other.CompareTag("Player"))
             {
                 _target = null;
@@ -97,6 +112,7 @@ namespace Enemy
                     _spawnpointPosition - transform.position,
                     Vector3.up);
                 _currentState = State.Return;
+                _agent.isStopped = false;
                 _animator.SetBool(_animRunningParamHash, true);
             }
         }
@@ -142,6 +158,9 @@ namespace Enemy
 
         private void _Attack()
         {
+            if (_target == null) return;
+            Player.PlayerHealth health = _target.GetComponent<Player.PlayerHealth>();
+            if (health != null && health.IsDead) return;
             if (!_canAttack)
                 return;
 
@@ -161,7 +180,7 @@ namespace Enemy
                 _target.position - transform.position,
                 Vector3.up);
 
-            if (_attackDelay >= _data.attackRate)
+            if (_attackDelay >= _data.attackRate && _attackCoroutine == null)
             {
                 // attack
                 _animator.SetTrigger(_animAttackParamHash);
@@ -183,12 +202,21 @@ namespace Enemy
 
         public void TakeHit(float amount)
         {
+            if (_currentState == State.Die) return;
             _hp -= amount;
             if (_hp <= 0)
             {
                 _animator.SetTrigger("Die");
                 _modelCollider.enabled = false;
                 _currentState = State.Die;
+                Died?.Invoke(this);
+                _agent.isStopped = true;
+                GetComponent<SphereCollider>().enabled = false;
+                if (_attackCoroutine != null)
+                {
+                    StopCoroutine(_attackCoroutine);
+                    _attackCoroutine = null;
+                }
                 StartCoroutine(Tools.Utils.WaitingForCurrentAnimation(
                     _animator,
                     () =>
@@ -233,6 +261,18 @@ namespace Enemy
             Vector3 popupPosition = transform.position + transform.up * height;
             Tools.Graphics.CreateDamagePopup(amount, popupPosition);
 
+        }
+
+        public void TryDealAttackDamage()
+        {
+            if (_currentState != State.Attack || !_canAttack || _target == null) return;
+            Vector3 offset = _target.position - transform.position;
+            if (offset.sqrMagnitude > _data.attackRadius * _data.attackRadius) return;
+            offset.y = 0f;
+            if (offset.sqrMagnitude > 0.001f && Vector3.Dot(transform.forward, offset.normalized) < 0.5f)
+                return;
+            Player.PlayerHealth health = _target.GetComponent<Player.PlayerHealth>();
+            if (health != null) health.TakeDamage(_attackDamage, transform.position);
         }
 
     }

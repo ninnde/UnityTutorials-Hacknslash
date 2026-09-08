@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace Skills
@@ -20,28 +19,22 @@ namespace Skills
         public Sprite icon;
         public GameObject fxPrefab;
 
-        private bool _inCooldown;
+        private float _readyAt;
 
         private void Awake()
         {
-            _inCooldown = false;
+            _readyAt = 0f;
         }
 
         public bool Cast()
         {
-            if (_inCooldown) return false;
+            if (Time.time < _readyAt) return false;
             SkillEffects.EFFECTS[code](this);
 
-            _inCooldown = true;
-            _Resetting();
+            _readyAt = Time.time + Mathf.Max(0f, cooldown);
             return true;
         }
 
-        private async void _Resetting()
-        {
-            await Task.Delay((int)(cooldown * 1000));
-            _inCooldown = false;
-        }
     }
 
 }

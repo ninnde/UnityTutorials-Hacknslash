@@ -14,15 +14,28 @@ namespace Player
     public class PlayerController : MonoBehaviour
     {
         private CharacterController _controller;
+        private PlayerHealth _health;
+        private PlayerHitReaction _hitReaction;
+        private PlayerDodge _dodge;
         [SerializeField] private Animator _animator;
         private PlayerData _data;
         private Transform _animatorTransform;
 
         private bool _inUI;
+        public Transform MovementCamera { get; set; }
+
+        private Vector3 MovementDirection(Vector2 input)
+        {
+            if (MovementCamera == null) return new Vector3(input.x, 0f, input.y);
+            Vector3 forward = Vector3.ProjectOnPlane(MovementCamera.forward, Vector3.up).normalized;
+            Vector3 right = Vector3.Cross(Vector3.up, forward);
+            return forward * input.y + right * input.x;
+        }
 
         #region Variables: Inputs
         private InputAction _moveAction;
         private InputAction _attackAction;
+        private InputAction _dodgeAction;
         #endregion
 
         #region Variables: Movement
@@ -50,6 +63,14 @@ namespace Player
         private void Awake()
         {
             _controller = GetComponent<CharacterController>();
+            _health = GetComponent<PlayerHealth>();
+            if (_health == null) _health = gameObject.AddComponent<PlayerHealth>();
+            _hitReaction = GetComponent<PlayerHitReaction>();
+            if (_hitReaction == null) _hitReaction = gameObject.AddComponent<PlayerHitReaction>();
+            _dodge = GetComponent<PlayerDodge>();
+            if (_dodge == null) _dodge = gameObject.AddComponent<PlayerDodge>();
+            _dodgeAction = new InputAction("Dodge", InputActionType.Button, "<Keyboard>/space");
+            _dodgeAction.AddBinding("<Gamepad>/leftStickPress");
             _animatorTransform = _animator.transform;
 
             _running = false;
@@ -71,6 +92,9 @@ namespace Player
 
         private void OnEnable()
         {
+            _health.Died += StopForDeath;
+            _dodgeAction.performed += OnDodge;
+            _dodgeAction.Enable();
             _moveAction = Inputs.InputManager.InputActions.Player.Move;
             _moveAction.Enable();
 
@@ -81,16 +105,39 @@ namespace Player
 
         private void OnDisable()
         {
+            _health.Died -= StopForDeath;
+            _dodgeAction.performed -= OnDodge;
+            _dodgeAction.Disable();
+            _dodge.Cancel();
+            _hitReaction.Cancel();
             _moveAction.Disable();
+            _attackAction.performed -= _OnAttackAction;
             _attackAction.Disable();
         }
 
         private void Update()
         {
-            if (_attacking)
+            if (_health.IsDead)
                 return;
 
-            _inUI = EventSystem.current.IsPointerOverGameObject();
+            if (_dodge.IsActive)
+            {
+                _controller.Move(_dodge.ConsumeDisplacement(Time.deltaTime));
+                return;
+            }
+
+            if (_hitReaction.IsActive)
+            {
+                _running = false;
+                _animator.SetBool(_animRunningParamHash, false);
+                _controller.Move(_hitReaction.ConsumeDisplacement(Time.deltaTime));
+                return;
+            }
+
+            if (_attacking || _data == null)
+                return;
+
+            _inUI = Cursor.lockState != CursorLockMode.Locked && EventSystem.current.IsPointerOverGameObject();
 
             _move = _moveAction.ReadValue<Vector2>();
             if (_move.sqrMagnitude > 0.01f)
@@ -112,7 +159,7 @@ namespace Player
                     _animator.SetBool(_animOverburdenedParamHash, false);
                 }
 
-                Vector3 v = new Vector3(_move.x, 0f, _move.y);
+                Vector3 v = MovementDirection(_move);
                 float s = _data.moveSpeed;
                 if (_data.overburdened) s *= 0.33f;
                 _animatorTransform.rotation =
@@ -131,8 +178,29 @@ namespace Player
             _data = Tools.AddressablesLoader.instance.playerData;
         }
 
+        private void OnDestroy()
+        {
+            _dodgeAction?.Dispose();
+        }
+
+        private void OnDodge(InputAction.CallbackContext context)
+        {
+            // The standalone action follows the tutorial's Player map/menu gate.
+            if (!_moveAction.enabled || _data == null || _health.IsDead || _attacking || overrideDamage != -1f ||
+                _hitReaction.IsActive || Inventory.InventoryManager.inLootPanel || Time.timeScale <= 0f)
+                return;
+            Vector2 input = _moveAction.ReadValue<Vector2>();
+            Vector3 direction = input.sqrMagnitude > 0.01f
+                ? MovementDirection(input) : -_animatorTransform.forward;
+            if (!_dodge.TryBegin(direction)) return;
+            _animatorTransform.rotation = Quaternion.LookRotation(-direction, Vector3.up);
+            _running = false;
+            _animator.SetBool(_animRunningParamHash, false);
+        }
+
         private void _OnAttackAction(InputAction.CallbackContext obj)
         {
+            if (_health.IsDead || _dodge.IsActive || _data == null) return;
             if (_inUI)
                 return;
 
@@ -176,6 +244,7 @@ namespace Player
 
         public void TriggerState(string stateName, System.Action onFinish = null)
         {
+            if (_health.IsDead) return;
             _animator.SetTrigger(stateName);
             if (onFinish != null)
                 StartCoroutine(Tools.Utils.WaitingForCurrentAnimation(_animator, onFinish));
@@ -187,6 +256,17 @@ namespace Player
             _animator.SetInteger(
                 _animAttackComboStepParamHash, _comboHitStep);
             _attacking = false;
+        }
+
+        public void StopForDeath()
+        {
+            _dodge.Cancel();
+            StopAllCoroutines();
+            _comboAttackResetCoroutine = null;
+            ResetAttackCombo();
+            _running = false;
+            _animator.SetBool(_animRunningParamHash, false);
+            overrideDamage = -1f;
         }
     }
 

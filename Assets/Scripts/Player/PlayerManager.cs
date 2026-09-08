@@ -19,6 +19,14 @@ namespace Player
         private void Awake()
         {
             _equipmentCache = new Tools.ItemCache();
+            for (int i = 0; i < _skills.Length; i++)
+                if (_skills[i] != null) _skills[i] = Instantiate(_skills[i]);
+        }
+
+        private void OnDestroy()
+        {
+            foreach (var skill in _skills)
+                if (skill != null) Destroy(skill);
         }
 
         private void Start()

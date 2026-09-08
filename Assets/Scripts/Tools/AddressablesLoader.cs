@@ -39,15 +39,18 @@ namespace Tools
             AsyncOperationHandle<Player.PlayerData> playerDataLoadHandle
                 = _playerData.LoadAssetAsync<Player.PlayerData>();
             yield return playerDataLoadHandle;
-            playerData = playerDataLoadHandle.Result;
+            playerData = Instantiate(playerDataLoadHandle.Result);
+            playerData.overburdened = false;
             playerData.currentAttackRange = playerData.baseAttackRange;
 
             addressablesLoaded.Invoke();
         }
 
-        private void OnApplicationQuit()
+        private void OnDestroy()
         {
             _playerData.ReleaseAsset();
+            if (playerData != null) Destroy(playerData);
+            if (instance == this) instance = null;
         }
 
     }

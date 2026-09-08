@@ -103,6 +103,13 @@ namespace UI
 
         public void _CastSlot(int i)
         {
+            if (i < 0 || i >= _skills.Length || _skills[i] == null) return;
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            if (player == null) return;
+            Player.PlayerHealth health = player.GetComponent<Player.PlayerHealth>();
+            if (health != null && health.IsDead) return;
+            Player.PlayerDodge dodge = player.GetComponent<Player.PlayerDodge>();
+            if (dodge != null && dodge.IsActive) return;
             bool cast = _skills[i].Cast();
             if (cast)
                 StartCoroutine(_ShowingCooldown(i, _skills[i].cooldown));

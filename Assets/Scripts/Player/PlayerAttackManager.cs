@@ -23,15 +23,19 @@ namespace Player
 
         private void _PlayerHit(int comboStep, Transform hand)
         {
+            PlayerData runtimeData = Tools.AddressablesLoader.instance.playerData;
+            if (runtimeData == null) return;
+            PlayerHealth health = GetComponentInParent<PlayerHealth>();
+            if (health != null && health.IsDead) return;
             Collider[] closeEnemies = Physics.OverlapSphere(
-                hand.position, _data.currentAttackRange, _ENEMY_LAYER);
+                hand.position, runtimeData.currentAttackRange, _ENEMY_LAYER);
             foreach (Collider enemy in closeEnemies)
             {
                 Enemy.EnemyManager em =
                     enemy.transform.parent.GetComponent<Enemy.EnemyManager>();
                 if (em != null)
                 {
-                    float dmg = _data.AttackDamage * (comboStep + 1);
+                    float dmg = runtimeData.AttackDamage * (comboStep + 1);
                     float overrideDamage = PlayerController.overrideDamage;
                     if (overrideDamage != -1f)
                         dmg = overrideDamage;

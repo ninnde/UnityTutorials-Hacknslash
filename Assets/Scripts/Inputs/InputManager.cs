@@ -7,6 +7,7 @@ using UnityEngine.InputSystem;
 namespace Inputs
 {
 
+    [DefaultExecutionOrder(-1000)]
     public class InputManager : MonoBehaviour
     {
         public enum InputDeviceType
@@ -45,6 +46,10 @@ namespace Inputs
 
         private void Awake()
         {
+            _inputActions?.Dispose();
+            _inputActions = new DefaultInputActions();
+            Inventory.InventoryManager.inLootPanel = false;
+            Player.PlayerController.overrideDamage = -1f;
             deviceChanged = new UnityEvent();
             _GetCurrentDevices();
             currentInputDeviceType = _GetInputType(_currentDevices[0]);
