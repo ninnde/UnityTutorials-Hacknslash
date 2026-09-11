@@ -3,17 +3,17 @@ using UnityEngine.UI;
 
 namespace UI
 {
-    [RequireComponent(typeof(Tools.WaveManager))]
-    public class WaveProgressUI : MonoBehaviour
+    [RequireComponent(typeof(Tools.ArenaEncounterManager))]
+    public class EncounterProgressUI : MonoBehaviour
     {
-        private Tools.WaveManager _waves;
+        private Tools.ArenaEncounterManager _encounter;
         private Text _label;
         private Image _fill;
 
         private void Start()
         {
-            _waves = GetComponent<Tools.WaveManager>();
-            var root = new GameObject("Wave HUD", typeof(Canvas), typeof(CanvasScaler));
+            _encounter = GetComponent<Tools.ArenaEncounterManager>();
+            var root = new GameObject("Encounter HUD", typeof(Canvas), typeof(CanvasScaler));
             root.transform.SetParent(transform);
             root.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
             root.GetComponent<Canvas>().sortingOrder = 50;
@@ -51,8 +51,8 @@ namespace UI
 
         private void Update()
         {
-            _label.text = $"{_waves.Status}\nProgreso: {_waves.Defeated}/{_waves.TotalEnemies}";
-            _fill.rectTransform.anchorMax = new Vector2(_waves.Progress, 1f);
+            _label.text = $"{_encounter.Status}\nDerrotados: {_encounter.Defeated}/{_encounter.TotalEnemies}";
+            _fill.rectTransform.anchorMax = new Vector2(_encounter.Progress, 1f);
         }
     }
 }

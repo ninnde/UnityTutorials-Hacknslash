@@ -29,6 +29,11 @@ namespace Enemy
         public event System.Action<EnemyManager> Died;
         private bool _persistentTarget;
 
+        public void SetDetectionRadius(float radius)
+        {
+            GetComponent<SphereCollider>().radius = Mathf.Max(_data.attackRadius, radius);
+        }
+
         public void Engage(Transform target)
         {
             _persistentTarget = true;
@@ -90,13 +95,8 @@ namespace Enemy
             if (_currentState == State.Die || _persistentTarget) return;
             if (other.CompareTag("Player"))
             {
-                _target = other.transform;
-                _agent.destination = _target.position;
-                transform.rotation = Quaternion.LookRotation(
-                    _target.position - transform.position,
-                    Vector3.up);
-                _currentState = State.MoveTo;
-                _animator.SetBool(_animRunningParamHash, true);
+                // Only detection starts persistent pursuit; spawning does not alert anyone.
+                Engage(other.transform);
             }
         }
 

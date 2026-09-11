@@ -16,6 +16,7 @@ namespace Player
         private PlayerHealth _health;
         private Transform _pivot;
         private float _yaw;
+        public Vector3 ViewForward => Quaternion.Euler(0f, _yaw, 0f) * Vector3.forward;
         private bool _released;
         private bool _focused = true;
 

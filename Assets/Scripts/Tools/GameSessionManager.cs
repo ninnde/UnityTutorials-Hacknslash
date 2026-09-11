@@ -7,19 +7,20 @@ namespace Tools
 {
     public class GameSessionManager : MonoBehaviour
     {
+        [SerializeField, Min(0f)] private float _victoryDelay = 3f;
         private Player.PlayerHealth _health;
         private GameObject _panel;
         private Button _restart;
         private bool _restarting;
-        private WaveManager _waves;
+        private ArenaEncounterManager _encounter;
         private Text _resultText;
 
         private void Start()
         {
             _health = GameObject.FindGameObjectWithTag("Player").GetComponent<Player.PlayerHealth>();
             _health.Died += OnDefeat;
-            _waves = GetComponent<WaveManager>();
-            if (_waves != null) _waves.Completed += OnVictory;
+            _encounter = GetComponent<ArenaEncounterManager>();
+            if (_encounter != null) _encounter.Completed += OnVictory;
             GameObject canvasObject = new GameObject("Session UI", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             canvasObject.transform.SetParent(transform);
             Canvas canvas = canvasObject.GetComponent<Canvas>();
@@ -70,6 +71,14 @@ namespace Tools
 
         private void OnVictory()
         {
+            StartCoroutine(ShowVictoryAfterDelay());
+        }
+
+        private System.Collections.IEnumerator ShowVictoryAfterDelay()
+        {
+            // Let the last death animation and loot finish before pausing the game.
+            yield return new WaitForSeconds(_victoryDelay);
+            if (_health == null || _health.IsDead || _restarting) yield break;
             ShowResult("Victoria - Arena completada");
         }
 
@@ -98,7 +107,7 @@ namespace Tools
         private void OnDestroy()
         {
             if (_health != null) _health.Died -= OnDefeat;
-            if (_waves != null) _waves.Completed -= OnVictory;
+            if (_encounter != null) _encounter.Completed -= OnVictory;
             Time.timeScale = 1f;
         }
     }

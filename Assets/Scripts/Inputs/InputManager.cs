@@ -52,7 +52,7 @@ namespace Inputs
             Player.PlayerController.overrideDamage = -1f;
             deviceChanged = new UnityEvent();
             _GetCurrentDevices();
-            currentInputDeviceType = _GetInputType(_currentDevices[0]);
+            currentInputDeviceType = _GetInputType(_currentDevices.FirstOrDefault());
         }
 
         private void OnEnable()
@@ -102,7 +102,7 @@ namespace Inputs
                 return "";
             List<string> controls = new List<string>();
             foreach (InputControl c in action.controls)
-                if (c.device == _currentDevices[0] || c.device == _currentDevices[1])
+                if (_currentDevices.Take(2).Contains(c.device))
                     controls.Add(c.name);
             if (controls.Count == 1)
                 return controls[0];
@@ -135,7 +135,7 @@ namespace Inputs
         #region Event Callbacks
         private void InputDeviceChanged(InputDevice device, InputDeviceChange change)
         {
-            InputDevice _oldDevice = _currentDevices[0];
+            InputDevice _oldDevice = _currentDevices.FirstOrDefault();
 
             switch (change)
             {
@@ -149,9 +149,9 @@ namespace Inputs
                     break;
             }
 
-            if (_currentDevices[0] != _oldDevice)
+            if (_currentDevices.FirstOrDefault() != _oldDevice)
             {
-                currentInputDeviceType = _GetInputType(_currentDevices[0]);
+                currentInputDeviceType = _GetInputType(_currentDevices.FirstOrDefault());
                 deviceChanged.Invoke();
             }
         }

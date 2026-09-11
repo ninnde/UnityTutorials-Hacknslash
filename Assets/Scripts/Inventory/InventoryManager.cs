@@ -383,12 +383,16 @@ namespace Inventory
 
         private void _OnLootAction(InputAction.CallbackContext obj)
         {
+            if (_player == null || inLootPanel) return;
+            _lootBagsInSight.RemoveAll(t => t == null);
             // find closest loot bag
             Vector3 p = _player.transform.position;
-            _closestLootBag = _lootBagsInSight
+            Transform closest = _lootBagsInSight
                 .OrderBy((Transform t) => (p - t.position).sqrMagnitude)
-                .First()
-                .GetComponent<LootBagManager>();
+                .FirstOrDefault();
+            if (closest == null) return;
+            _closestLootBag = closest.GetComponent<LootBagManager>();
+            if (_closestLootBag == null || _closestLootBag.contents == null) return;
 
             _SetLoot(_closestLootBag.contents);
             _lootPanel.SetActive(true);

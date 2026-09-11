@@ -23,6 +23,8 @@ namespace Player
 
         private bool _inUI;
         public Transform MovementCamera { get; set; }
+        // This model faces local -Z, matching movement and the stationary dodge.
+        public Vector3 FacingDirection => Vector3.ProjectOnPlane(-_animator.transform.forward, Vector3.up).normalized;
 
         private Vector3 MovementDirection(Vector2 input)
         {
@@ -191,7 +193,7 @@ namespace Player
                 return;
             Vector2 input = _moveAction.ReadValue<Vector2>();
             Vector3 direction = input.sqrMagnitude > 0.01f
-                ? MovementDirection(input) : -_animatorTransform.forward;
+                ? MovementDirection(input) : FacingDirection;
             if (!_dodge.TryBegin(direction)) return;
             _animatorTransform.rotation = Quaternion.LookRotation(-direction, Vector3.up);
             _running = false;

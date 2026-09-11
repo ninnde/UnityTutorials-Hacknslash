@@ -27406,9 +27406,10 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier:
   _enemyTemplate: {fileID: 587467190}
-  _enemyCounts: 020000000300000004000000
-  _betweenWaves: 5
-  _spawnRadius: 6
+  _enemyCount: 10
+  _initialDistance: 14
+  _enemySpacing: 8
+  _detectionRadius: 6
 
 --- !u!114 &99000105
 MonoBehaviour:
